@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Üretim Planlama</title>
+<style>:root{
+  --bg:#f4f5f7; --card:#fff; --ink:#1d2430; --muted:#6a7485; --line:#dfe3ea; --line2:#eef0f4;
+  --accent:#2f5d7c; --accent-ink:#fff; --accent-soft:#e6eff5; --danger:#b3261e; --danger-soft:#fdecea;
+  --warn:#fff7e0; --radius:8px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 "Segoe UI",system-ui,-apple-system,sans-serif;display:flex;flex-direction:column}
+[hidden]{display:none!important}
+
+.topbar{display:flex;align-items:center;gap:20px;padding:0 16px;background:var(--accent);color:var(--accent-ink);height:50px;flex:none}
+.brand{font-weight:600;font-size:16px;letter-spacing:.2px}
+.tabs{display:flex;gap:2px;align-self:stretch}
+.tab{background:none;border:0;color:#cfe0ec;padding:0 16px;font:inherit;cursor:pointer;border-bottom:3px solid transparent}
+.tab:hover{color:#fff}
+.tab.active{color:#fff;border-bottom-color:#fff;font-weight:600}
+.actions{margin-left:auto;display:flex;align-items:center;gap:8px}
+.topbar .btn{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25);color:#fff}
+.topbar .btn:hover{background:rgba(255,255,255,.22)}
+.savestate{font-size:12px;color:#cfe0ec;margin-right:6px}
+
+main{flex:1;min-height:0;overflow:hidden;display:flex}
+.panel{flex:1;min-width:0;display:flex;flex-direction:column;padding:12px 16px 8px;gap:10px;overflow:hidden}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius)}
+.settings{display:flex;flex-wrap:wrap;gap:12px 18px;padding:10px 14px;align-items:flex-end}
+.settings>label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+.settings input[type=number]{width:110px}
+.inline{display:inline-flex;align-items:center;gap:6px}
+.chk{display:inline-flex;align-items:center;gap:4px;color:var(--ink);font-size:13px}
+
+input,select,button{font:inherit}
+input[type=text],input[type=number],input[type=date],input[type=search],select{
+  border:1px solid var(--line);border-radius:6px;padding:5px 8px;background:#fff;color:var(--ink);min-width:0}
+input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent)}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:6px;padding:6px 12px;cursor:pointer}
+.btn:hover{background:var(--accent-soft)}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn.primary:hover{background:#264c66}
+.btn.danger{color:var(--danger)}
+.btn.danger:hover{background:var(--danger-soft)}
+.btn.icon{padding:2px 7px;line-height:1.2;font-size:12px}
+input:disabled{background:#eef0f4;color:#8a93a3}
+.col-sm input{min-width:0}
+
+.summary{display:grid;grid-template-columns:1.7fr 1.7fr repeat(4,1fr);gap:10px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:8px 12px;display:flex;flex-direction:column;min-width:0}
+.stat .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.stat .v{font-size:19px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat.wide .v{font-size:15px;line-height:1.9}
+.stat .sub{font-size:11px;color:var(--muted)}
+
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.toolbar .spacer{flex:1}
+.toolbar .sep{width:1px;height:22px;background:var(--line)}
+.toolbar input[type=search]{width:220px}
+.muted{color:var(--muted)}
+
+.tablewrap{flex:1;min-height:0;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:var(--radius)}
+.tablewrap.narrow{max-width:620px}
+table.grid{border-collapse:separate;border-spacing:0;width:100%;font-variant-numeric:tabular-nums}
+.grid th{position:sticky;top:0;background:#eef2f6;z-index:2;text-align:left;font-size:12px;font-weight:600;color:#3b4658;padding:8px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.grid td{padding:3px 6px;border-bottom:1px solid var(--line2);white-space:nowrap}
+.grid tbody tr:hover td{background:#f8fafc}
+.grid .num{text-align:right}
+.grid td.d{padding:3px 8px}
+.grid td.muted2{color:var(--muted)}
+.grid td input{width:100%;border-color:transparent;background:transparent;padding:4px 6px}
+.grid td input:hover{border-color:var(--line);background:#fff}
+.grid td input:focus{background:#fff}
+.grid td input[type=number]{text-align:right}
+.grid tr.err td{background:var(--danger-soft)}
+.grid tr.err td.errmsg{color:var(--danger);font-weight:600}
+.grid tr.hidden{display:none}
+.grid td.act{text-align:right;width:1%}
+.grid td.act .btn{border-color:transparent;background:transparent;color:var(--muted)}
+.grid td.act .btn:hover{background:var(--accent-soft);color:var(--ink)}
+.grid td.act .btn.del:hover{background:var(--danger-soft);color:var(--danger)}
+.col-batch{width:70px}.col-code{width:130px}.col-qty{width:100px}.col-note{width:180px}
+.col-code input{min-width:118px}.col-batch input{min-width:58px}.col-qty input{min-width:88px}.col-note input{min-width:160px}
+.empty{padding:30px;text-align:center;color:var(--muted)}
+.hint{margin:0;color:var(--muted);font-size:12px}
+
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#1d2430;color:#fff;padding:9px 16px;border-radius:8px;box-shadow:0 4px 18px rgba(0,0,0,.25);z-index:50}
+
+@media (max-width:1250px){.summary{grid-template-columns:repeat(3,1fr)}}
+
+@media print{
+  @page{size:A4 landscape;margin:10mm}
+  body{background:#fff;font-size:10px;display:block}
+  .topbar,.toolbar,.settings,.hint,.noprint,.toast{display:none!important}
+  main,.panel{display:block;overflow:visible;padding:0}
+  .panel[hidden]{display:none!important}
+  .tablewrap{overflow:visible;border:0}
+  .grid th{position:static}
+  .grid td input{border:0;padding:0;font-size:10px}
+  .summary{grid-template-columns:repeat(6,1fr);margin-bottom:6px}
+  .stat .v{font-size:13px}
+  .grid tr.hidden{display:none}
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">Üretim Planlama</div>
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="plan" role="tab">Plan</button>
+    <button class="tab" data-tab="modules" role="tab">Modüller</button>
+    <button class="tab" data-tab="holidays" role="tab">Tatiller</button>
+  </nav>
+  <div class="actions">
+    <span id="saveState" class="savestate" aria-live="polite"></span>
+    <button id="btnOpen" class="btn">Aç…</button>
+    <button id="btnSaveAs" class="btn">Farklı kaydet…</button>
+    <button id="btnXlsx" class="btn">Excel'e aktar (CSV)</button>
+    <button id="btnPrint" class="btn">Yazdır / PDF</button>
+  </div>
+</header>
+
+<main>
+  <!-- ===== PLAN ===== -->
+  <section id="tab-plan" class="panel">
+    <div class="settings card">
+      <label>Kesim başlangıç tarihi
+        <span class="inline">
+          <input type="date" id="sStart">
+          <label class="chk"><input type="checkbox" id="sToday"> Bugün</label>
+        </span>
+      </label>
+      <label>Hesaplama yöntemi
+        <select id="sMode">
+          <option value="pack">Günlük paket sayısına göre</option>
+          <option value="team">Günlük takım (puan) sayısına göre</option>
+        </select>
+      </label>
+      <label>Günde kaç paket <input type="number" id="sPack" min="1" step="1"></label>
+      <label>Günde kaç takım <input type="number" id="sTeam" min="1" step="1"></label>
+      <label>Üretim içi ara stok günü <input type="number" id="sStock" min="0" step="1"></label>
+      <label>İskonto % <input type="number" id="sDisc" min="0" max="100" step="0.5"></label>
+    </div>
+
+    <div class="summary">
+      <div class="stat wide"><span class="k" id="planTitle">ÜRETİM PLANI</span><span class="v" id="tCut">—</span><span class="sub">Kesim tarihi aralığı</span></div>
+      <div class="stat wide"><span class="k">Paket tarihi aralığı</span><span class="v" id="tPack">—</span></div>
+      <div class="stat"><span class="k">Toplam puan</span><span class="v" id="tPuan">0</span></div>
+      <div class="stat"><span class="k">Toplam paket</span><span class="v" id="tPaket">0</span></div>
+      <div class="stat"><span class="k">Toplam gün</span><span class="v" id="tDays">0</span></div>
+      <div class="stat"><span class="k">Plan ciro</span><span class="v" id="tCiro">0</span></div>
+    </div>
+
+    <div class="toolbar">
+      <button id="btnAddRow" class="btn primary">+ Satır ekle</button>
+      <span class="sep"></span>
+      <label class="inline">Seriyi toplu ekle
+        <select id="bulkSeries"></select>
+        <input type="number" id="bulkQty" min="1" value="60" title="Her modül için plan adedi">
+        <button id="btnBulk" class="btn">Ekle</button>
+      </label>
+      <span class="spacer"></span>
+      <label class="inline">Seri
+        <select id="fSeries"><option value="">Tümü</option></select>
+      </label>
+      <input type="search" id="fText" placeholder="Ara: kod, modül, açıklama…">
+      <button id="btnClear" class="btn danger" title="Plandaki tüm satırları sil">Planı temizle</button>
+    </div>
+
+    <div class="tablewrap">
+      <table id="planTable" class="grid">
+        <thead>
+          <tr>
+            <th class="num">#</th><th>Parti</th><th>Kesim tarihi</th><th>Kod</th><th>Seri</th><th>Modül adı</th>
+            <th class="num">Plan adet</th><th>Açıklama</th><th>Paket tarihi</th>
+            <th class="num">Top. puan</th><th class="num">Top. paket</th><th class="num">Kümüle gün</th>
+            <th class="num">Fiyat</th><th class="num">Tutar (iskontolu)</th><th class="noprint"></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div id="planEmpty" class="empty" hidden>Planda satır yok. “+ Satır ekle” ile başlayın.</div>
+    </div>
+    <p class="hint">Tarihler pazar günleri ve Tatiller sekmesindeki günler atlanarak hesaplanır. Satır sırası önemlidir: kümüle gün, yukarıdan aşağıya toplanır.</p>
+  </section>
+
+  <!-- ===== MODÜLLER ===== -->
+  <section id="tab-modules" class="panel" hidden>
+    <div class="toolbar">
+      <button id="btnAddMod" class="btn primary">+ Modül ekle</button>
+      <span class="sep"></span>
+      <label class="inline">1 takım = <input type="number" id="sPPT" min="1" step="1" style="width:5rem"> paket</label>
+      <span class="spacer"></span>
+      <span class="muted" id="modCount"></span>
+    </div>
+    <div class="tablewrap">
+      <table id="modTable" class="grid">
+        <thead><tr>
+          <th>Malzeme grubu</th><th>Seri adı</th><th>Modül adı</th><th>Modül kodu</th>
+          <th class="num">Paket sayısı</th><th class="num">Zorluk %</th><th class="num">Takım</th><th class="num">Satış fiyatı TL</th><th class="noprint"></th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="hint">Takım = paket sayısı ÷ (1 takım kaç paket) × zorluk. Plan sekmesindeki “puan” bu değerden hesaplanır.</p>
+  </section>
+
+  <!-- ===== TATİLLER ===== -->
+  <section id="tab-holidays" class="panel" hidden>
+    <div class="toolbar">
+      <input type="date" id="hDate">
+      <input type="text" id="hNote" placeholder="Açıklama (ör. ramazan)">
+      <button id="btnAddHol" class="btn primary">Ekle</button>
+      <span class="sep"></span>
+      <label class="inline">Yıl <input type="number" id="hYear" style="width:6rem"></label>
+      <button id="btnSat" class="btn">Tüm cumartesileri ekle</button>
+      <span class="spacer"></span>
+      <span class="muted" id="holCount"></span>
+    </div>
+    <div class="tablewrap narrow">
+      <table id="holTable" class="grid">
+        <thead><tr><th>Tarih</th><th>Gün</th><th>Açıklama</th><th class="noprint"></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="hint">Pazar günleri zaten tatil sayılır; buraya pazar dışındaki tatil günlerini (cumartesiler, bayramlar vb.) ekleyin.</p>
+  </section>
+</main>
+
+<div id="toast" class="toast" hidden></div>
+<script>
+(function(){
+  const KEY='uretim-planlama-v1';
+  const SEED={"settings": {"startDate": null, "perDayTeam": 15, "perDayPack": 300, "mode": "pack", "stockDays": 14, "discount": 0.15, "packsPerTeam": 20}, "modules": [{"group": "YATAK ODASI", "series": "ARES", "name": "6 KAPAKLI DOLAP", "code": "S01.001", "packs": 7, "difficulty": 1, "price": 35000}, {"group": "YATAK ODASI", "series": "ARES", "name": "ŞİFONYER", "code": "S01.002", "packs": 4, "difficulty": 1, "price": 20000}, {"group": "YATAK ODASI", "series": "ARES", "name": "KOMODİN", "code": "S01.003", "packs": 1, "difficulty": 1, "price": 10000}, {"group": "YATAK ODASI", "series": "ARES", "name": "KARYOLA 160LİK", "code": "S01.004", "packs": 3, "difficulty": 1, "price": 26000}], "holidays": [{"date": "2027-01-01", "note": ""}, {"date": "2027-01-02", "note": ""}, {"date": "2027-01-09", "note": ""}, {"date": "2027-01-16", "note": ""}, {"date": "2027-01-23", "note": ""}, {"date": "2027-01-30", "note": ""}, {"date": "2027-02-06", "note": ""}, {"date": "2027-02-13", "note": ""}, {"date": "2027-02-20", "note": ""}, {"date": "2027-02-27", "note": ""}, {"date": "2027-03-06", "note": ""}, {"date": "2027-03-09", "note": "ramazan"}, {"date": "2027-03-10", "note": "ramazan"}, {"date": "2027-03-11", "note": "ramazan"}, {"date": "2027-03-13", "note": ""}, {"date": "2027-03-20", "note": ""}, {"date": "2027-03-27", "note": ""}, {"date": "2027-04-03", "note": ""}, {"date": "2027-04-10", "note": ""}, {"date": "2027-04-17", "note": ""}, {"date": "2027-04-23", "note": ""}, {"date": "2027-04-24", "note": ""}, {"date": "2027-05-01", "note": ""}, {"date": "2027-05-08", "note": ""}, {"date": "2027-05-15", "note": ""}, {"date": "2027-05-16", "note": "kurban"}, {"date": "2027-05-17", "note": "kurban"}, {"date": "2027-05-18", "note": "kurban"}, {"date": "2027-05-19", "note": "kurban"}, {"date": "2027-05-22", "note": ""}, {"date": "2027-05-29", "note": ""}, {"date": "2027-06-05", "note": ""}, {"date": "2027-06-12", "note": ""}, {"date": "2027-06-19", "note": ""}, {"date": "2027-06-26", "note": ""}, {"date": "2027-07-03", "note": ""}, {"date": "2027-07-10", "note": ""}, {"date": "2027-07-15", "note": ""}, {"date": "2027-07-17", "note": ""}, {"date": "2027-07-24", "note": ""}, {"date": "2027-07-31", "note": ""}, {"date": "2027-08-07", "note": ""}, {"date": "2027-08-14", "note": ""}, {"date": "2027-08-21", "note": ""}, {"date": "2027-08-28", "note": ""}, {"date": "2027-08-30", "note": ""}, {"date": "2027-09-04", "note": ""}, {"date": "2027-09-11", "note": ""}, {"date": "2027-09-18", "note": ""}, {"date": "2027-09-25", "note": ""}, {"date": "2027-10-02", "note": ""}, {"date": "2027-10-09", "note": ""}, {"date": "2027-10-16", "note": ""}, {"date": "2027-10-23", "note": ""}, {"date": "2027-10-29", "note": ""}, {"date": "2027-10-30", "note": ""}, {"date": "2027-11-06", "note": ""}, {"date": "2027-11-13", "note": ""}, {"date": "2027-11-20", "note": ""}, {"date": "2027-11-27", "note": ""}, {"date": "2027-12-04", "note": ""}, {"date": "2027-12-11", "note": ""}, {"date": "2027-12-18", "note": ""}, {"date": "2027-12-25", "note": ""}, {"date": "2028-01-01", "note": ""}], "plan": [{"batch": 1, "code": "S01.001", "qty": 60, "note": ""}, {"batch": 1, "code": "S01.002", "qty": 60, "note": ""}, {"batch": 1, "code": "S01.003", "qty": 60, "note": ""}, {"batch": 1, "code": "S01.004", "qty": 120, "note": ""}]};
+  const dl=(name,blob)=>{const u=URL.createObjectURL(blob);const x=document.createElement('a');x.href=u;x.download=name;document.body.appendChild(x);x.click();x.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);};
+  const csv=p=>{const sh=p.sheets[0];const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';return '\ufeff'+[sh.columns.map(c=>q(c.header)).join(';')].concat(sh.rows.map(r=>r.map(q).join(';'))).join('\r\n');};
+  window.api={
+    load:async()=>{try{const s=localStorage.getItem(KEY);if(s)return JSON.parse(s);}catch(e){}return JSON.parse(JSON.stringify(SEED));},
+    save:async s=>{localStorage.setItem(KEY,JSON.stringify(s));return true;},
+    openFile:()=>new Promise(res=>{const i=document.createElement('input');i.type='file';i.accept='.json';i.onchange=async()=>{const f=i.files[0];if(!f)return res(null);try{const d=JSON.parse(await f.text());if(!d.settings||!Array.isArray(d.modules)||!Array.isArray(d.plan))return res({error:'Geçerli bir plan dosyası değil.'});if(!Array.isArray(d.holidays))d.holidays=[];res({data:d,file:f.name});}catch(e){res({error:'Dosya okunamadı.'});}};i.click();}),
+    saveAs:async s=>{dl('uretim-plani.json',new Blob([JSON.stringify(s,null,1)],{type:'application/json'}));return 'uretim-plani.json (İndirilenler)';},
+    exportXlsx:async p=>{dl('uretim-plani.csv',new Blob([csv(p)],{type:'text/csv;charset=utf-8'}));return 'uretim-plani.csv (Excel ile açılır)';},
+    print:async()=>{window.print();return true;}
+  };
+})();
+</script>
+<script>/* Üretim planı hesaplama çekirdeği.
+ * Excel'deki PLAN / MODÜL / TATİLLER sayfalarındaki formüllerin birebir karşılığıdır.
+ * Tarihler "YYYY-MM-DD" metni olarak saklanır, hesapta UTC gün numarasına çevrilir. */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.PlanCore = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+  const DAY = 86400000;
+
+  function parseISO(s) {
+    if (!s) return null;
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+    if (!m) return null;
+    return Date.UTC(+m[1], +m[2] - 1, +m[3]);
+  }
+  function toISO(ms) {
+    if (ms == null || isNaN(ms)) return '';
+    const d = new Date(ms);
+    return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');
+  }
+  function todayMs() {
+    const n = new Date();
+    return Date.UTC(n.getFullYear(), n.getMonth(), n.getDate());
+  }
+  /* Excel WORKDAY.INTL(start, days, 11, tatiller): hafta sonu = yalnızca Pazar. */
+  function workdayIntl(startMs, n, holidaySet) {
+    let d = startMs;
+    let left = Math.floor(n + 1e-9);
+    while (left > 0) {
+      d += DAY;
+      if (new Date(d).getUTCDay() !== 0 && !holidaySet.has(d)) left--;
+    }
+    return d;
+  }
+
+  /* state: {settings, modules, holidays, plan}
+   * visible: isteğe bağlı süzgeç (satır => bool); SUBTOTAL gibi yalnız görünen satırları toplar. */
+  function compute(state, visible) {
+    const s = state.settings;
+    const start = parseISO(s.startDate) ?? todayMs();
+    const hol = new Set(state.holidays.map(h => parseISO(h.date)).filter(x => x != null));
+    const byCode = new Map(state.modules.map(m => [String(m.code).trim().toUpperCase(), m]));
+    const perTeam = +s.perDayTeam || 0, perPack = +s.perDayPack || 0;
+    const packsPerTeam = +s.packsPerTeam || 1;
+    const teamMode = s.mode === 'team';
+
+    const rows = [];
+    let k = 0, packBase = null;
+    state.plan.forEach((r, i) => {
+      const mod = byCode.get(String(r.code || '').trim().toUpperCase());
+      const qty = +r.qty || 0;
+      const out = { index: i, batch: r.batch, code: r.code, qty, note: r.note || '', ok: !!mod };
+      if (!mod) { out.error = 'Modül bulunamadı'; rows.push(out); return; }
+      const team = (mod.packs / packsPerTeam) * (mod.difficulty ?? 1);
+      out.series = mod.series; out.name = mod.name;
+      out.puan = team * qty;
+      out.paket = mod.packs * qty;
+      const div = teamMode ? perTeam : perPack;
+      k += div > 0 ? (teamMode ? out.puan : out.paket) / div : 0;
+      out.k = k;
+      if (packBase == null) {            // tablonun ilk satırı
+        packBase = start + ((+s.stockDays || 0) + Math.floor(k + 1e-9)) * DAY;
+        out.cut = start;
+        out.pack = packBase;
+      } else {
+        out.cut = workdayIntl(start, k, hol);
+        out.pack = workdayIntl(packBase, k, hol);
+      }
+      out.price = mod.price;
+      out.amount = (mod.price || 0) * qty * (1 - (+s.discount || 0));
+      rows.push(out);
+    });
+
+    const vis = rows.filter(r => r.ok && (!visible || visible(r)));
+    const dates = key => vis.map(r => r[key]).filter(x => x != null);
+    const sum = key => vis.reduce((a, r) => a + (r[key] || 0), 0);
+    const totals = {
+      cutMin: dates('cut').length ? Math.min(...dates('cut')) : null,
+      cutMax: dates('cut').length ? Math.max(...dates('cut')) : null,
+      packMin: dates('pack').length ? Math.min(...dates('pack')) : null,
+      packMax: dates('pack').length ? Math.max(...dates('pack')) : null,
+      puan: sum('puan'),
+      paket: sum('paket'),
+      days: rows.reduce((a, r) => Math.max(a, r.k || 0), 0),
+      ciro: rows.reduce((a, r) => a + (r.amount || 0), 0),
+      start,
+    };
+    return { rows, totals };
+  }
+
+  return { compute, workdayIntl, parseISO, toISO, todayMs, DAY };
+});
+</script>
+<script>'use strict';
+(() => {
+  const C = PlanCore;
+  const $ = s => document.querySelector(s);
+  const DOW = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+  const MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+  const nf = (n, d = 0) => (n == null || isNaN(n) ? '' : Number(n).toLocaleString('tr-TR', { minimumFractionDigits: d, maximumFractionDigits: d }));
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const fmtDate = ms => {
+    if (ms == null) return '—';
+    const d = new Date(ms);
+    return String(d.getUTCDate()).padStart(2, '0') + '.' + String(d.getUTCMonth() + 1).padStart(2, '0') + '.' + d.getUTCFullYear() + ' ' + DOW[d.getUTCDay()];
+  };
+  const lc = s => String(s ?? '').toLocaleLowerCase('tr');
+
+  let S = null;
+  let saveTimer = null;
+
+  /* ---------- durum / kayıt ---------- */
+  function normalize(st) {
+    const d = { startDate: null, perDayTeam: 15, perDayPack: 300, mode: 'pack', stockDays: 14, discount: 0.15, packsPerTeam: 20 };
+    st.settings = Object.assign(d, st.settings || {});
+    st.modules = st.modules || []; st.holidays = st.holidays || []; st.plan = st.plan || [];
+    return st;
+  }
+  function scheduleSave() {
+    $('#saveState').textContent = 'Kaydediliyor…';
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+      try { await window.api.save(S); $('#saveState').textContent = 'Kaydedildi ✓'; }
+      catch (e) { $('#saveState').textContent = 'Kaydedilemedi!'; }
+    }, 400);
+  }
+  let toastTimer;
+  function toast(msg) {
+    const t = $('#toast'); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => (t.hidden = true), 3200);
+  }
+
+  /* ---------- sekmeler ---------- */
+  function showTab(name) {
+    document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+    document.querySelectorAll('.panel').forEach(p => (p.hidden = p.id !== 'tab-' + name));
+    if (name === 'plan') renderPlan();
+    if (name === 'modules') renderModules();
+    if (name === 'holidays') renderHolidays();
+  }
+  document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+
+  /* ---------- ayarlar ---------- */
+  function loadSettings() {
+    const s = S.settings;
+    $('#sToday').checked = !s.startDate;
+    $('#sStart').value = s.startDate || C.toISO(C.todayMs());
+    $('#sStart').disabled = !s.startDate;
+    $('#sMode').value = s.mode;
+    $('#sPack').value = s.perDayPack; $('#sTeam').value = s.perDayTeam;
+    $('#sStock').value = s.stockDays; $('#sDisc').value = +(s.discount * 100).toFixed(4);
+    $('#sPPT').value = s.packsPerTeam;
+    syncModeFields();
+  }
+  function syncModeFields() {
+    $('#sPack').disabled = S.settings.mode === 'team';
+    $('#sTeam').disabled = S.settings.mode !== 'team';
+  }
+  function bindSettings() {
+    const num = (sel, key, scale = 1) => $(sel).addEventListener('input', e => {
+      const v = parseFloat(e.target.value);
+      if (!isNaN(v)) { S.settings[key] = v / scale; afterSettings(); }
+    });
+    num('#sPack', 'perDayPack'); num('#sTeam', 'perDayTeam'); num('#sStock', 'stockDays'); num('#sDisc', 'discount', 100); num('#sPPT', 'packsPerTeam');
+    $('#sMode').addEventListener('change', e => { S.settings.mode = e.target.value; syncModeFields(); afterSettings(); });
+    $('#sToday').addEventListener('change', e => {
+      $('#sStart').disabled = e.target.checked;
+      S.settings.startDate = e.target.checked ? null : ($('#sStart').value || C.toISO(C.todayMs()));
+      if (e.target.checked) $('#sStart').value = C.toISO(C.todayMs());
+      afterSettings();
+    });
+    $('#sStart').addEventListener('input', e => { if (e.target.value) { S.settings.startDate = e.target.value; afterSettings(); } });
+  }
+  function afterSettings() {
+    if (!$('#tab-modules').hidden) renderModules(true); else refreshDerived();
+    scheduleSave();
+  }
+
+  /* ---------- süzgeç ---------- */
+  const filterState = () => ({ series: $('#fSeries').value, q: lc($('#fText').value.trim()) });
+  function passes(r, f) {
+    if (f.series && r.series !== f.series) return false;
+    if (f.q && !lc([r.code, r.name, r.series, r.note].join(' ')).includes(f.q)) return false;
+    return true;
+  }
+  function seriesList() { return [...new Set(S.modules.map(m => m.series).filter(Boolean))]; }
+  function fillSeriesSelects() {
+    const list = seriesList();
+    const fs = $('#fSeries'), bs = $('#bulkSeries');
+    const cur = fs.value;
+    fs.innerHTML = '<option value="">Tümü</option>' + list.map(s => `<option>${esc(s)}</option>`).join('');
+    fs.value = list.includes(cur) ? cur : '';
+    bs.innerHTML = list.map(s => `<option>${esc(s)}</option>`).join('');
+    let dl = $('#codes');
+    if (!dl) { dl = document.createElement('datalist'); dl.id = 'codes'; document.body.appendChild(dl); }
+    dl.innerHTML = S.modules.map(m => `<option value="${esc(m.code)}">${esc(m.series)} – ${esc(m.name)}</option>`).join('');
+  }
+
+  /* ---------- PLAN ---------- */
+  function renderPlan() {
+    fillSeriesSelects();
+    const tb = $('#planTable tbody');
+    tb.innerHTML = S.plan.map((r, i) => `
+      <tr data-i="${i}">
+        <td class="d num muted2 c-idx">${i + 1}</td>
+        <td class="col-batch"><input type="text" data-f="batch" value="${esc(r.batch)}" aria-label="Parti"></td>
+        <td class="d c-cut"></td>
+        <td class="col-code"><input type="text" data-f="code" list="codes" value="${esc(r.code)}" aria-label="Modül kodu"></td>
+        <td class="d c-series"></td>
+        <td class="d c-name"></td>
+        <td class="col-qty"><input type="number" data-f="qty" min="0" step="1" value="${esc(r.qty)}" aria-label="Plan adet"></td>
+        <td class="col-note"><input type="text" data-f="note" value="${esc(r.note)}" aria-label="Açıklama"></td>
+        <td class="d c-pack"></td>
+        <td class="d num c-puan"></td><td class="d num c-paket"></td><td class="d num c-k"></td>
+        <td class="d num c-price"></td><td class="d num c-amount"></td>
+        <td class="act noprint">
+          <button class="btn icon" data-act="up" title="Yukarı taşı">▲</button><button class="btn icon" data-act="down" title="Aşağı taşı">▼</button><button class="btn icon" data-act="ins" title="Altına satır ekle">＋</button><button class="btn icon del" data-act="del" title="Satırı sil">✕</button>
+        </td>
+      </tr>`).join('');
+    refreshDerived();
+  }
+
+  function refreshDerived() {
+    const f = filterState();
+    const { rows, totals } = C.compute(S, r => passes(r, f));
+    const tb = $('#planTable tbody');
+    rows.forEach(r => {
+      const tr = tb.children[r.index]; if (!tr) return;
+      const set = (c, v) => { tr.querySelector(c).textContent = v; };
+      tr.classList.toggle('err', !r.ok);
+      tr.classList.toggle('hidden', !passes(r, f));
+      if (!r.ok) {
+        ['.c-cut', '.c-series', '.c-pack', '.c-puan', '.c-paket', '.c-k', '.c-price', '.c-amount'].forEach(c => set(c, ''));
+        set('.c-name', r.code ? 'Modül bulunamadı' : 'Kod seçin'); tr.querySelector('.c-name').classList.add('errmsg');
+        return;
+      }
+      tr.querySelector('.c-name').classList.remove('errmsg');
+      set('.c-cut', fmtDate(r.cut)); set('.c-series', r.series); set('.c-name', r.name);
+      set('.c-pack', fmtDate(r.pack)); set('.c-puan', nf(r.puan, 1)); set('.c-paket', nf(r.paket));
+      set('.c-k', nf(r.k, 2)); set('.c-price', nf(r.price)); set('.c-amount', nf(r.amount));
+    });
+    tb.querySelectorAll('.c-idx').forEach((td, i) => (td.textContent = i + 1));
+    const d = new Date(totals.start);
+    $('#planTitle').textContent = 'ÜRETİM PLANI · ' + MONTHS[d.getUTCMonth()] + ' ' + d.getUTCFullYear();
+    $('#tCut').textContent = totals.cutMin == null ? '—' : fmtDate(totals.cutMin) + '  →  ' + fmtDate(totals.cutMax);
+    $('#tPack').textContent = totals.packMin == null ? '—' : fmtDate(totals.packMin) + '  →  ' + fmtDate(totals.packMax);
+    $('#tPuan').textContent = nf(totals.puan, 1); $('#tPaket').textContent = nf(totals.paket);
+    $('#tDays').textContent = nf(totals.days, 1); $('#tCiro').textContent = nf(totals.ciro) + ' ₺';
+    $('#planEmpty').hidden = S.plan.length > 0;
+    lastResult = { rows, totals };
+  }
+  let lastResult = null;
+
+  function newPlanRow() {
+    const last = S.plan[S.plan.length - 1];
+    return { batch: last ? last.batch : 1, code: '', qty: 0, note: '' };
+  }
+  $('#planTable tbody').addEventListener('input', e => {
+    const inp = e.target.closest('input[data-f]'); if (!inp) return;
+    const i = +inp.closest('tr').dataset.i, f = inp.dataset.f;
+    if (f === 'qty') S.plan[i].qty = inp.value === '' ? 0 : parseFloat(inp.value);
+    else if (f === 'code') S.plan[i].code = inp.value.trim().toUpperCase();
+    else S.plan[i][f] = f === 'batch' && /^\d+$/.test(inp.value) ? +inp.value : inp.value;
+    refreshDerived(); scheduleSave();
+  });
+  $('#planTable tbody').addEventListener('click', e => {
+    const b = e.target.closest('button[data-act]'); if (!b) return;
+    const i = +b.closest('tr').dataset.i, act = b.dataset.act;
+    let focus = null;
+    if (act === 'up' && i > 0) { [S.plan[i - 1], S.plan[i]] = [S.plan[i], S.plan[i - 1]]; focus = i - 1; }
+    else if (act === 'down' && i < S.plan.length - 1) { [S.plan[i + 1], S.plan[i]] = [S.plan[i], S.plan[i + 1]]; focus = i + 1; }
+    else if (act === 'ins') { S.plan.splice(i + 1, 0, { batch: S.plan[i].batch, code: '', qty: 0, note: '' }); focus = i + 1; }
+    else if (act === 'del') { S.plan.splice(i, 1); }
+    else return;
+    renderPlan(); scheduleSave();
+    if (focus != null) $(`#planTable tbody tr[data-i="${focus}"] input[data-f="code"]`)?.focus();
+  });
+  $('#btnAddRow').addEventListener('click', () => {
+    S.plan.push(newPlanRow()); renderPlan(); scheduleSave();
+    const tr = $('#planTable tbody').lastElementChild; tr.scrollIntoView({ block: 'nearest' });
+    tr.querySelector('input[data-f="code"]').focus();
+  });
+  $('#btnBulk').addEventListener('click', () => {
+    const series = $('#bulkSeries').value, qty = parseFloat($('#bulkQty').value);
+    if (!series) return toast('Önce Modüller sekmesinde seri tanımlayın.');
+    if (!(qty > 0)) return toast('Plan adedi sıfırdan büyük olmalı.');
+    const mods = S.modules.filter(m => m.series === series);
+    const batch = newPlanRow().batch;
+    mods.forEach(m => S.plan.push({ batch, code: m.code, qty, note: '' }));
+    renderPlan(); scheduleSave(); toast(`${series}: ${mods.length} modül eklendi.`);
+  });
+  $('#btnClear').addEventListener('click', () => {
+    if (!S.plan.length) return;
+    if (!confirm(`Plandaki ${S.plan.length} satırın tümü silinecek. Emin misiniz?`)) return;
+    S.plan = []; renderPlan(); scheduleSave();
+  });
+  $('#fSeries').addEventListener('change', refreshDerived);
+  $('#fText').addEventListener('input', refreshDerived);
+
+  /* ---------- MODÜLLER ---------- */
+  const modTeam = m => (m.packs / (S.settings.packsPerTeam || 1)) * (m.difficulty ?? 1);
+  function renderModules(onlyTeam) {
+    if (onlyTeam) { document.querySelectorAll('#modTable tbody tr').forEach((tr, i) => (tr.querySelector('.c-team').textContent = nf(modTeam(S.modules[i]), 3))); return; }
+    $('#modTable tbody').innerHTML = S.modules.map((m, i) => `
+      <tr data-i="${i}" data-old="${esc(m.code)}">
+        <td><input type="text" data-f="group" value="${esc(m.group)}"></td>
+        <td><input type="text" data-f="series" value="${esc(m.series)}"></td>
+        <td><input type="text" data-f="name" value="${esc(m.name)}" style="min-width:200px"></td>
+        <td><input type="text" data-f="code" value="${esc(m.code)}" style="width:110px"></td>
+        <td><input type="number" data-f="packs" min="0" step="1" value="${esc(m.packs)}" style="width:90px"></td>
+        <td><input type="number" data-f="difficulty" min="0" step="1" value="${+((m.difficulty ?? 1) * 100).toFixed(4)}" style="width:80px"></td>
+        <td class="d num c-team">${nf(modTeam(m), 3)}</td>
+        <td><input type="number" data-f="price" min="0" step="1" value="${esc(m.price)}" style="width:110px"></td>
+        <td class="act noprint"><button class="btn icon del" data-act="del" title="Modülü sil">✕</button></td>
+      </tr>`).join('');
+    $('#modCount').textContent = S.modules.length + ' modül';
+  }
+  $('#modTable tbody').addEventListener('input', e => {
+    const inp = e.target.closest('input[data-f]'); if (!inp) return;
+    const tr = inp.closest('tr'), i = +tr.dataset.i, f = inp.dataset.f, m = S.modules[i];
+    if (['packs', 'price'].includes(f)) m[f] = parseFloat(inp.value) || 0;
+    else if (f === 'difficulty') m.difficulty = (parseFloat(inp.value) || 0) / 100;
+    else if (f === 'code') m.code = inp.value.trim().toUpperCase();
+    else m[f] = inp.value;
+    tr.querySelector('.c-team').textContent = nf(modTeam(m), 3);
+    scheduleSave();
+  });
+  $('#modTable tbody').addEventListener('change', e => {
+    const inp = e.target.closest('input[data-f]'); if (!inp) return;
+    const tr = inp.closest('tr'), i = +tr.dataset.i, m = S.modules[i];
+    if (inp.dataset.f === 'code') {
+      const old = tr.dataset.old;
+      if (old && old !== m.code) S.plan.forEach(p => { if (String(p.code).toUpperCase() === old.toUpperCase()) p.code = m.code; });
+      tr.dataset.old = m.code; inp.value = m.code;
+      if (S.modules.filter(x => x.code === m.code).length > 1) toast('Uyarı: bu modül kodu birden fazla kez kullanılıyor.');
+    }
+    scheduleSave();
+  });
+  $('#modTable tbody').addEventListener('click', e => {
+    const b = e.target.closest('button[data-act="del"]'); if (!b) return;
+    const i = +b.closest('tr').dataset.i, m = S.modules[i];
+    const used = S.plan.filter(p => String(p.code).toUpperCase() === String(m.code).toUpperCase()).length;
+    if (!confirm(`“${m.name}” modülü silinsin mi?` + (used ? `\n\nBu modül planda ${used} satırda kullanılıyor; o satırlar hata verecek.` : ''))) return;
+    S.modules.splice(i, 1); renderModules(); scheduleSave();
+  });
+  $('#btnAddMod').addEventListener('click', () => {
+    const last = S.modules[S.modules.length - 1] || {};
+    S.modules.push({ group: last.group || '', series: last.series || '', name: '', code: '', packs: 1, difficulty: 1, price: 0 });
+    renderModules(); scheduleSave();
+    const tr = $('#modTable tbody').lastElementChild; tr.scrollIntoView({ block: 'nearest' });
+    tr.querySelector('input[data-f="name"]').focus();
+  });
+
+  /* ---------- TATİLLER ---------- */
+  function sortHolidays() { S.holidays.sort((a, b) => (a.date || '').localeCompare(b.date || '')); }
+  function renderHolidays() {
+    sortHolidays();
+    $('#holTable tbody').innerHTML = S.holidays.map((h, i) => {
+      const ms = C.parseISO(h.date);
+      return `<tr data-i="${i}">
+        <td><input type="date" data-f="date" value="${esc(h.date)}"></td>
+        <td class="d muted2">${ms == null ? '' : DOW[new Date(ms).getUTCDay()]}</td>
+        <td><input type="text" data-f="note" value="${esc(h.note)}"></td>
+        <td class="act noprint"><button class="btn icon del" data-act="del" title="Sil">✕</button></td></tr>`;
+    }).join('');
+    $('#holCount').textContent = S.holidays.length + ' gün';
+    if (!$('#hYear').value) $('#hYear').value = new Date(C.parseISO(S.settings.startDate) ?? C.todayMs()).getUTCFullYear();
+  }
+  $('#holTable tbody').addEventListener('change', e => {
+    const inp = e.target.closest('input[data-f]'); if (!inp) return;
+    const i = +inp.closest('tr').dataset.i;
+    S.holidays[i][inp.dataset.f] = inp.value;
+    if (inp.dataset.f === 'date') renderHolidays();
+    scheduleSave();
+  });
+  $('#holTable tbody').addEventListener('click', e => {
+    const b = e.target.closest('button[data-act="del"]'); if (!b) return;
+    S.holidays.splice(+b.closest('tr').dataset.i, 1); renderHolidays(); scheduleSave();
+  });
+  $('#btnAddHol').addEventListener('click', () => {
+    const date = $('#hDate').value;
+    if (!date) return toast('Tarih seçin.');
+    if (S.holidays.some(h => h.date === date)) return toast('Bu tarih zaten listede.');
+    S.holidays.push({ date, note: $('#hNote').value.trim() });
+    $('#hDate').value = ''; $('#hNote').value = '';
+    renderHolidays(); scheduleSave();
+  });
+  $('#btnSat').addEventListener('click', () => {
+    const y = parseInt($('#hYear').value, 10);
+    if (!(y >= 2000 && y <= 2100)) return toast('Geçerli bir yıl girin.');
+    const have = new Set(S.holidays.map(h => h.date));
+    let n = 0;
+    for (let d = Date.UTC(y, 0, 1); new Date(d).getUTCFullYear() === y; d += C.DAY) {
+      if (new Date(d).getUTCDay() === 6 && !have.has(C.toISO(d))) { S.holidays.push({ date: C.toISO(d), note: 'cumartesi' }); n++; }
+    }
+    renderHolidays(); scheduleSave(); toast(`${n} cumartesi eklendi.`);
+  });
+
+  /* ---------- dosya işlemleri ---------- */
+  $('#btnOpen').addEventListener('click', async () => {
+    const r = await window.api.openFile(); if (!r) return;
+    if (r.error) return toast(r.error);
+    if (!confirm('Şu anki plan, seçilen dosyadaki planla değiştirilecek. Devam edilsin mi?\n(Mevcut planı saklamak istiyorsanız önce “Farklı kaydet” yapın.)')) return;
+    S = normalize(r.data); loadSettings(); showTab('plan'); scheduleSave(); toast('Plan açıldı.');
+  });
+  $('#btnSaveAs').addEventListener('click', async () => {
+    const f = await window.api.saveAs(S); if (f) toast('Kaydedildi: ' + f);
+  });
+  $('#btnPrint').addEventListener('click', () => { showTab('plan'); window.api.print(); });
+  $('#btnXlsx').addEventListener('click', async () => {
+    const { rows, totals } = C.compute(S);
+    const iso = C.toISO;
+    const sheets = [
+      {
+        name: 'PLAN',
+        columns: [
+          { header: 'PARTİ', width: 8, type: 'number' }, { header: 'KESİM TARİHİ', width: 14, type: 'date' }, { header: 'KOD', width: 11, type: 'text' },
+          { header: 'SERİ', width: 14, type: 'text' }, { header: 'MODÜL ADI', width: 28, type: 'text' }, { header: 'PLAN ADET', width: 10, type: 'number' },
+          { header: 'AÇIKLAMA', width: 24, type: 'text' }, { header: 'PAKET TARİHİ', width: 14, type: 'date' }, { header: 'TOPL PUAN', width: 11, type: 'dec' },
+          { header: 'TOPL PAKET', width: 11, type: 'number' }, { header: 'KÜMÜLE GÜN', width: 11, type: 'dec' }, { header: 'FİYAT', width: 11, type: 'money' }, { header: 'TUTAR', width: 14, type: 'money' },
+        ],
+        rows: rows.map(r => [typeof r.batch === 'number' ? r.batch : (r.batch === '' || r.batch == null ? null : String(r.batch)), r.ok ? iso(r.cut) : '', r.code, r.series || '', r.ok ? r.name : 'Modül bulunamadı', r.qty, r.note,
+          r.ok ? iso(r.pack) : '', r.ok ? r.puan : null, r.ok ? r.paket : null, r.ok ? r.k : null, r.ok ? r.price : null, r.ok ? r.amount : null]),
+      },
+      {
+        name: 'ÖZET',
+        columns: [{ header: 'BAŞLIK', width: 34, type: 'text' }, { header: 'DEĞER', width: 34, type: 'text' }],
+        rows: [
+          ['Kesim başlangıç tarihi', fmtDate(totals.start)], ['Kesim aralığı', totals.cutMin == null ? '' : fmtDate(totals.cutMin) + ' → ' + fmtDate(totals.cutMax)],
+          ['Paket aralığı', totals.packMin == null ? '' : fmtDate(totals.packMin) + ' → ' + fmtDate(totals.packMax)],
+          ['Toplam puan', nf(totals.puan, 1)], ['Toplam paket', nf(totals.paket)], ['Toplam gün', nf(totals.days, 1)],
+          ['Plan ciro (iskontolu)', nf(totals.ciro) + ' TL'], ['İskonto', '%' + nf(S.settings.discount * 100, 1)],
+          ['Yöntem', S.settings.mode === 'team' ? 'Günlük takım: ' + S.settings.perDayTeam : 'Günlük paket: ' + S.settings.perDayPack],
+          ['Üretim içi ara stok günü', String(S.settings.stockDays)],
+        ],
+      },
+      {
+        name: 'MODÜL',
+        columns: [
+          { header: 'MALZEME GRUBU', width: 16, type: 'text' }, { header: 'SERİ ADI', width: 14, type: 'text' }, { header: 'ADI', width: 28, type: 'text' }, { header: 'MODÜL KODU', width: 12, type: 'text' },
+          { header: 'PAKET SAYISI', width: 12, type: 'number' }, { header: 'ZORLUK%', width: 10, type: 'number' }, { header: 'TAKIM', width: 10, type: 'dec' }, { header: 'SATIŞ FİYATI TL', width: 14, type: 'money' },
+        ],
+        rows: S.modules.map(m => [m.group, m.series, m.name, m.code, m.packs, (m.difficulty ?? 1) * 100, modTeam(m), m.price]),
+      },
+      {
+        name: 'TATİLLER',
+        columns: [{ header: 'PAZAR HARİÇ TATİL GÜNLERİ', width: 26, type: 'date' }, { header: 'AÇIKLAMA', width: 24, type: 'text' }],
+        rows: S.holidays.map(h => [h.date, h.note]),
+      },
+    ];
+    const f = await window.api.exportXlsx({ sheets });
+    if (f) toast('Excel dosyası oluşturuldu: ' + f);
+  });
+
+  /* ---------- başlangıç ---------- */
+  (async function init() {
+    S = normalize(await window.api.load());
+    bindSettings(); loadSettings(); showTab('plan');
+    $('#saveState').textContent = '';
+  })();
+})();
+</script>
+</body>
+</html>
